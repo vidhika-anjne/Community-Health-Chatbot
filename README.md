@@ -10,44 +10,28 @@ A full-stack AI-powered community health assistant with a RAG (Retrieval-Augment
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          Browser (React + Vite)                         │
 │                                                                         │
-│   ┌───────────┐  ┌────────────────┐  ┌──────────────┐  ┌───────────┐  │
-│   │ LandingPage│  │   ChatPage     │  │AdminDashboard│  │ Analytics │  │
-│   └───────────┘  └──────┬─────────┘  └──────┬───────┘  └─────┬─────┘  │
-│                         │                   │                 │         │
-└─────────────────────────┼───────────────────┼─────────────────┼─────────┘
-                          │  HTTP / REST (axios, Vite proxy)    │
-                          ▼                   ▼                 ▼
+│   ┌───────────┐  ┌────────────────┐  ┌──────────────┐  ┌───────────┐    │
+│   │LandingPage│  │   ChatPage     │  │AdminDashboard│  │ Analytics │    │
+│   └───────────┘  └──────┬─────────┘  └──────┬───────┘  └─────┬─────┘    │
+│                         │                   │                │          │
+└─────────────────────────┼───────────────────┼────────────────┼─────────┘
+                          │  HTTP / REST (axios, Vite proxy)   │
+                          ▼                   ▼                ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                     Spring Boot 3.4.3  (port 8083)                      │
 │                                                                         │
 │  ┌──────────────────┐          ┌──────────────────────────────────────┐ │
 │  │ PublicController │          │       AdminDashboardController       │ │
-│  │  /api/chat/**    │          │  /api/admin/stats  /documents        │ │
-│  └────────┬─────────┘          │  /articles  /chats  /clusters        │ │
-│           │                    │  /analytics                          │ │
+│  │  /api/chat/**    │          │                                      │ │
+│  └────────┬─────────┘          │                                      │ │
+│           │                    │                                      │ │
 │           ▼                    └────────────────┬─────────────────────┘ │
 │  ┌──────────────────┐                           │                       │
-│  │   ChatService    │              ┌────────────▼──────────────────┐    │
-│  │                  │              │    AdminDashboardService       │    │
-│  │ 1. Embed query   │              │                               │    │
-│  │ 2. Cosine search │              │  processPdfUpload()           │    │
-│  │    (threshold    │              │  ├─ Python subprocess         │    │
-│  │     0.30, top-3) │              │  │   (pypdf + pdfminer.six)   │    │
-│  │ 3. Build RAG     │              │  └─ chunkText() → embed →save │    │
-│  │    prompt        │              │                               │    │
-│  │ 4. LLM generate  │              │  clusterUserQueries()         │    │
-│  │ 5. Strip think/  │              │  ├─ embedAll() (batch)        │    │
-│  │    markdown tags │              │  ├─ greedy centroid cluster   │    │
-│  │ 6. Persist msgs  │              │  └─ single LLM naming call    │    │
-│  └────────┬─────────┘              │                               │    │
-│           │                        │  @Scheduled every 30 min      │    │
-│           │                        │  refreshClusterAnalysis()     │    │
-│           │                        │                               │    │
-│           │                        │  getAnalytics()               │    │
-│           │                        │  ├─ weekly / 30d / 12m counts │    │
-│           │                        │  └─ rule-based insight text   │    │
+│  │   ChatService    │                           │                       │
+│  └────────┬─────────┘              ┌────────────▼──────────────────┐    │
+│           │                        │    AdminDashboardService      │    │
 │           │                        └───────────────────────────────┘    │
-│           │                                                              │
+│           │                                                             │
 │  ┌────────▼────────────────────────────────────────────────────────┐    │
 │  │                      AI Layer (LangChain4j 0.33.0)              │    │
 │  │                                                                 │    │
@@ -56,7 +40,7 @@ A full-stack AI-powered community health assistant with a RAG (Retrieval-Augment
 │  │  384-dim vectors, CPU-only         deepseek-r1:7b               │    │
 │  │  in-process, no server needed      localhost:11434              │    │
 │  └────────────────────────────────┬────────────────────────────────┘    │
-│                                   │                                      │
+│                                   │                                     │
 │  ┌────────────────────────────────▼────────────────────────────────┐    │
 │  │                  Spring Data JPA  /  Hibernate                  │    │
 │  │                  Repositories: Article · ChatSession            │    │
@@ -66,14 +50,7 @@ A full-stack AI-powered community health assistant with a RAG (Retrieval-Augment
                                     │
                                     ▼
                      ┌──────────────────────────────┐
-                     │  PostgreSQL  (port 5432)      │
-                     │  Database: health_chatbot     │
-                     │                              │
-                     │  Tables (auto via ddl-update) │
-                     │  ├─ kb_chunks                │
-                     │  ├─ chat_session             │
-                     │  ├─ chat_message             │
-                     │  └─ cluster_analysis_results │
+                     │          PostgreSQL          │
                      └──────────────────────────────┘
                                     ▲
                      ┌──────────────┴───────────────┐
