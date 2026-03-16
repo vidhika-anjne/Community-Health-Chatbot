@@ -8,11 +8,15 @@ secrets.properties
 application-local.properties
 application-prod.properties
 application-secret.properties
+# Database files
+*.db
+health_db.*
 
 # =============================================================================
 # JAVA / MAVEN (backend)
 # =============================================================================
 demo/target/
+demo/uploads/
 demo/.mvn/wrapper/maven-wrapper.jar
 demo/HELP.md
 *.class

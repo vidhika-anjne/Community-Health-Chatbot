@@ -44,6 +44,14 @@ public class Article {
     @Column(name = "embedding_json", columnDefinition = "TEXT")
     private String embeddingJson;
 
+    /** Absolute path on disk where the original uploaded PDF is stored (set on chunk 1 only). */
+    @Column(name = "pdf_file_path")
+    private String pdfFilePath;
+
+    /** Original filename of the uploaded PDF (set on chunk 1 only). */
+    @Column(name = "pdf_file_name")
+    private String pdfFileName;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

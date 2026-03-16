@@ -6,10 +6,18 @@ import com.communityHealth.Health_Info.repository.ArticleRepository;
 import com.communityHealth.Health_Info.repository.ChatSessionRepository;
 import com.communityHealth.Health_Info.service.AdminDashboardService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +90,9 @@ public class AdminDashboardController {
             doc.put("verified", rep.isVerified());
             doc.put("createdAt", rep.getCreatedAt());
             doc.put("chunkCount", chunks.size());
+            // Indicate whether the original PDF file was stored on disk
+            boolean hasPdf = chunks.stream().anyMatch(a -> a.getPdfFilePath() != null);
+            doc.put("hasPdf", hasPdf);
             return doc;
         }).collect(Collectors.toList());
     }
@@ -146,6 +157,38 @@ public class AdminDashboardController {
             return ResponseEntity.ok(dashboardService.getLatestClusters());
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Download the original PDF for a document.
+     * Looks up the first chunk of the document (chunkIndex == 1) to get the stored file path.
+     */
+    @GetMapping("/documents/{documentId}/pdf")
+    public ResponseEntity<Resource> downloadPdf(@PathVariable String documentId) {
+        try {
+            // Find the chunk that holds the PDF path (chunkIndex = 1)
+            List<Article> chunks = articleRepository.findByDocumentId(documentId);
+            Article rep = chunks.stream()
+                    .filter(a -> a.getPdfFilePath() != null)
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("No PDF stored for document: " + documentId));
+
+            Path filePath = Paths.get(rep.getPdfFilePath());
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists() || !resource.isReadable()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String filename = rep.getPdfFileName() != null ? rep.getPdfFileName() : "document.pdf";
+            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + encodedFilename + "\"")
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
         }
     }
 

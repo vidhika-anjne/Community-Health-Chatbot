@@ -25,7 +25,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import org.springframework.beans.factory.annotation.Value;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -43,6 +46,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class AdminDashboardService {
+
+    @Value("${app.upload.pdf-dir:uploads/pdfs}")
+    private String pdfUploadDir;
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ArticleRepository articleRepository;
@@ -52,10 +58,22 @@ public class AdminDashboardService {
     private final ObjectMapper objectMapper;
 
     public void processPdfUpload(MultipartFile file, String title, List<String> tags) throws Exception {
-        // 1. Save PDF temporarily
+        // 1. Persist the PDF to the permanent uploads directory
+        Path uploadPath = Paths.get(pdfUploadDir);
+        Files.createDirectories(uploadPath);
+
+        String originalFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "upload.pdf";
+        // Use a temp dir just for the Python extraction step
         Path tempDir = Files.createTempDirectory("health_pdfs");
-        File tempFile = new File(tempDir.toFile(), "upload.pdf");
+        File tempFile = new File(tempDir.toFile(), originalFilename);
         file.transferTo(tempFile);
+
+        // Save a permanent copy
+        // We name it <documentId>_<originalFilename> — documentId created early so we can reference it
+        String documentId = UUID.randomUUID().toString();
+        String storedFilename = documentId + "_" + originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+        Path permanentPath = uploadPath.resolve(storedFilename);
+        Files.copy(tempFile.toPath(), permanentPath, StandardCopyOption.REPLACE_EXISTING);
 
         // 2. Call Python script with pypdf
         // We use "python" or "py" depending on Windows convention, "python" is standard
@@ -92,14 +110,14 @@ public class AdminDashboardService {
         }
 
         // 3. Split into chunks and save each with its own embedding
-        String documentId = UUID.randomUUID().toString();
+        // documentId was already created above when naming the permanent file
         List<String> chunks = chunkText(extractedText, 800);
         int total = chunks.size();
         for (int i = 0; i < total; i++) {
             String chunk = chunks.get(i);
 
             float[] vector = embeddingModel.embed(chunk).content().vector();
-            Article article = Article.builder()
+            Article.ArticleBuilder builder = Article.builder()
                     .documentId(documentId)
                     .chunkIndex(i + 1)
                     .title(title)
@@ -108,12 +126,18 @@ public class AdminDashboardService {
                     .embeddingJson(floatArrayToString(vector))
                     .verified(true)
                     .language("English")
-                    .createdAt(LocalDateTime.now())
-                    .build();
-            articleRepository.save(article);
+                    .createdAt(LocalDateTime.now());
+
+            // Store the PDF path only on the first chunk so we can look it up later
+            if (i == 0) {
+                builder.pdfFilePath(permanentPath.toAbsolutePath().toString())
+                       .pdfFileName(originalFilename);
+            }
+
+            articleRepository.save(builder.build());
         }
 
-        // Cleanup
+        // Cleanup only the temp copy; the permanent copy in uploads/pdfs is kept
         Files.delete(tempFile.toPath());
         Files.delete(tempDir);
     }

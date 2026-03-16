@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, Bot, AlertTriangle, ShieldCheck, ChevronRight, MessageSquareDashed } from 'lucide-react';
+import { Send, User, Bot, ShieldCheck, AlertTriangle, Sparkles } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -12,7 +12,13 @@ const ChatPage = () => {
     const [isTyping, setIsTyping] = useState(false);
     const scrollRef = useRef(null);
 
-    const quickOptions = ["Symptoms checker", "Prevention tips", "COVID-19", "Myth vs Fact", "Dengue"];
+    const quickOptions = [
+      { label: "Check Symptoms", icon: "🌡️" },
+      { label: "Prevention Tips", icon: "🛡️" },
+      { label: "Vaccine Guide", icon: "💉" },
+      { label: "COVID-19 Info", icon: "🦠" },
+      { label: "Health Myths", icon: "🧠" }
+    ];
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -34,7 +40,6 @@ const ChatPage = () => {
                 message: text 
             });
 
-            // Simulate token-by-token streaming effect
             const fullResponse = response.data.response;
             const botMsgId = Date.now() + 1;
             setMessages(prev => [...prev, { id: botMsgId, sender: 'BOT', content: '', timestamp: new Date() }]);
@@ -46,7 +51,7 @@ const ChatPage = () => {
                 currentText += (i === 0 ? '' : ' ') + words[i];
                 const update = currentText;
                 setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, content: update } : m));
-                await new Promise(resolve => setTimeout(resolve, 30)); // Delay between words
+                await new Promise(resolve => setTimeout(resolve, 20));
             }
 
         } catch (error) {
@@ -57,109 +62,122 @@ const ChatPage = () => {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
-            {/* Header */}
-            <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm z-10">
+        <div className="flex flex-col h-[calc(100vh-160px)] bg-transparent">
+            {/* Header Area */}
+            <div className="flex items-center justify-between mb-6 px-2">
                 <div className="flex items-center gap-3">
-                    <div className="bg-primary-100 p-2 rounded-xl">
-                        <Bot className="text-primary-600" />
+                    <div className="relative">
+                        <div className="bg-blue-600 p-2.5 rounded-2xl shadow-blue-500/20 shadow-lg">
+                            <Bot className="text-white" size={24} />
+                        </div>
+                        <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-4 border-white dark:border-slate-950 rounded-full"></span>
                     </div>
                     <div>
-                        <h2 className="font-bold text-lg leading-tight">Public Health Bot</h2>
-                        <span className="text-xs text-green-500 font-medium flex items-center gap-1">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Online
-                        </span>
+                        <h2 className="font-bold text-slate-800 dark:text-white text-lg">HealthAI Assistant</h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Always active for your health</p>
                     </div>
                 </div>
-                <div className="hidden md:flex items-center gap-4 text-slate-500 text-sm">
-                    <span className="flex items-center gap-1"><ShieldCheck size={16} /> Verified Sources</span>
-                    <span className="flex items-center gap-1"><AlertTriangle size={16} /> Awareness Only</span>
-                </div>
-            </header>
-
-            {/* Chat Area */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-4">
-                <div className="max-w-3xl mx-auto flex flex-col min-h-full">
-                    <AnimatePresence>
-                        {messages.map((msg) => (
-                            <motion.div 
-                                key={msg.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className={`flex flex-col ${msg.sender === 'USER' ? 'items-end' : 'items-start'}`}
-                            >
-                                <div className={`flex gap-2 max-w-[85%] ${msg.sender === 'USER' ? 'flex-row-reverse' : ''}`}>
-                                    <div className={`mt-1 h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${msg.sender === 'USER' ? 'bg-primary-200 text-primary-700' : 'bg-slate-200 text-slate-600'}`}>
-                                        {msg.sender === 'USER' ? <User size={16} /> : <Bot size={16} />}
-                                    </div>
-                                    <div className={`rounded-2xl px-4 py-3 shadow-sm ${msg.sender === 'USER' ? 'bg-primary-600 text-white rounded-tr-none' : 'bg-white border border-slate-100 rounded-tl-none'}`}>
-                                        <p className="text-sm md:text-base whitespace-pre-wrap">{msg.content}</p>
-                                        <span className={`text-[10px] mt-1 block opacity-50 ${msg.sender === 'USER' ? 'text-right' : ''}`}>
-                                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-                    
-                    {isTyping && (
-                        <div className="flex gap-2 items-start opacity-70">
-                            <div className="mt-1 h-8 w-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center">
-                                <Bot size={16} />
-                            </div>
-                            <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-none px-4 py-3 flex gap-1 items-center h-10">
-                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-75"></span>
-                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-150"></span>
-                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-300"></span>
-                            </div>
-                        </div>
-                    )}
-                    <div ref={scrollRef} className="h-4" />
+                <div className="flex gap-2">
+                  <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <ShieldCheck size={14} className="text-green-500" />
+                    Verified Content
+                  </div>
                 </div>
             </div>
 
-            {/* Input Area */}
-            <div className="bg-white border-t border-slate-200 p-4 md:p-6 pb-8">
-                <div className="max-w-3xl mx-auto space-y-4">
-                    {/* Quick Options chips */}
-                    <div className="flex flex-wrap gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {/* Chat Area */}
+            <div className="flex-1 overflow-y-auto space-y-6 px-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                <AnimatePresence initial={false}>
+                    {messages.map((msg) => (
+                        <motion.div 
+                            key={msg.id}
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            className={`flex ${msg.sender === 'USER' ? 'justify-end' : 'justify-start'}`}
+                        >
+                            <div className={`flex gap-4 max-w-[85%] sm:max-w-[75%] ${msg.sender === 'USER' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                <div className={`h-10 w-10 flex-shrink-0 rounded-2xl flex items-center justify-center shadow-sm ${
+                                  msg.sender === 'USER' 
+                                  ? 'bg-blue-600 text-white' 
+                                  : 'bg-white dark:bg-slate-800 dark:text-white border dark:border-slate-700'
+                                }`}>
+                                    {msg.sender === 'USER' ? <User size={20} /> : <Bot size={20} />}
+                                </div>
+                                <div className={`relative px-5 py-4 rounded-3xl shadow-sm ${
+                                  msg.sender === 'USER' 
+                                  ? 'bg-blue-600 text-white rounded-tr-none' 
+                                  : 'bg-white dark:bg-slate-800 dark:text-white border dark:border-slate-700 rounded-tl-none'
+                                }`}>
+                                    <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                                    <p className={`text-[10px] mt-2 opacity-40 ${msg.sender === 'USER' ? 'text-right' : ''}`}>
+                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                    {isTyping && (
+                        <div className="flex gap-4 justify-start px-2">
+                             <div className="h-10 w-10 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center border dark:border-slate-700 shadow-sm">
+                                <Bot size={20} className="text-blue-600 animate-pulse" />
+                            </div>
+                            <div className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-3xl rounded-tl-none px-6 py-4 flex gap-1.5 items-center">
+                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></span>
+                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                            </div>
+                        </div>
+                    )}
+                </AnimatePresence>
+                <div ref={scrollRef} className="h-4" />
+            </div>
+
+            {/* Input & Options Area */}
+            <div className="mt-6">
+                <div className="max-w-4xl mx-auto space-y-4">
+                    {/* Quick Options */}
+                    <div className="flex flex-wrap gap-2 justify-center">
                         {quickOptions.map((opt, i) => (
                             <button 
                                 key={i}
-                                onClick={() => handleSend(opt)}
-                                className="px-4 py-1.5 bg-slate-100 border border-slate-200 rounded-full text-xs font-semibold text-slate-700 hover:bg-primary-50 hover:border-primary-200 whitespace-nowrap transition-colors"
+                                onClick={() => handleSend(opt.label)}
+                                className="group flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all shadow-sm"
                             >
-                                {opt}
+                                <span>{opt.icon}</span>
+                                {opt.label}
                             </button>
                         ))}
                     </div>
 
-                    {/* Disclaimer */}
-                    <p className="text-[10px] text-center text-slate-400 italic">
-                        Disclaimer: This bot provides general health information. If you're experiencing an emergency, call your local emergency number immediately.
-                    </p>
-
-                    {/* Text input */}
-                    <form 
-                        onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                        className="relative flex items-center gap-2"
-                    >
-                        <input 
-                            type="text" 
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all shadow-inner"
-                            placeholder="Type your health question here..."
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                        />
-                        <button 
-                            type="submit"
-                            disabled={!input.trim()}
-                            className={`absolute right-2 p-3 rounded-xl transition-all ${input.trim() ? 'bg-primary-600 text-white hover:bg-primary-700 active:scale-95 shadow-md' : 'text-slate-300 pointer-events-none'}`}
+                    {/* Text input container */}
+                    <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2rem] blur opacity-15 group-focus-within:opacity-30 transition-opacity"></div>
+                        <form 
+                            onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                            className="relative flex items-center gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-2 pl-6 shadow-xl"
                         >
-                            <Send size={20} />
-                        </button>
-                    </form>
+                            <Sparkles size={20} className="text-blue-500 hidden sm:block" />
+                            <input 
+                                type="text" 
+                                className="flex-1 bg-transparent py-3 text-sm sm:text-base text-slate-800 dark:text-white focus:outline-none"
+                                placeholder="Describe symptoms or ask a health question..."
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                            />
+                            <button 
+                                type="submit"
+                                disabled={!input.trim()}
+                                className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${
+                                  input.trim() 
+                                  ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md transform active:scale-95' 
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                                }`}
+                            >
+                                <span className="hidden sm:inline font-bold">Send</span>
+                                <Send size={18} />
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

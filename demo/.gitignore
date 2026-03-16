@@ -4,6 +4,13 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+### PDF uploads (stored at runtime, not committed) ###
+uploads/
+
+### Runtime artifacts ###
+health_db.mv.db
+health_db.*
+
 ### Sensitive config ###
 .env
 .env.*
